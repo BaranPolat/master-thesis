@@ -1,4 +1,3 @@
-# from pattern.text.en import PROGRESSIVE # aspect
 import pattern
 import spacy
 import re
@@ -119,61 +118,3 @@ def replace_words(matcher, original_text, replacement):
     if buffer_start < len(tok):
         text += tok[buffer_start:].text
     return text
-
-
-def main():
-    """
-
-    nlp = spacy.load("en_core_web_sm", disable=["ner", "lemmatizer"])
-    #nlp.add_pipe('merge_noun_chunks')
-    texts = [#"The white witches work bad, but the better players.",
-             #"The great men sleep until the night.",
-             #"The little girl was running to the mountain.",
-             #"The ladies want to catch, but the boys came first",
-             #"I've seen the queen.",
-             #"The cats could have worked.",
-             #"Pablo Picasso is working at the factory.",
-             #"The old man that looks like John",
-             #"Where the old men that are looking at her are bad, the women are fine",
-             "The fire alarm went off at the Holiday Inn in Hope Street at about 04:20 BST on Saturday and guest was asked to leave the hotel. As they gathered outside they saw the two buses, parked side-by-side in the car park, engulfed by flames. One of the tour groups is from Germany, the other from China and Taiwan. It was their first night in Northern Ireland. The driver of one of the buses said many of the passengers had left personal belongings on board and these had been destroyed. Both groups have organised replacement coaches and will begin their tour of the north coast later than they had planned. Polouse has appealed for information about the attack."
-            ]
-    pattern_stopiteration_workaround()
-    all_docs = []
-    for doc in nlp.pipe(texts, batch_size=500):
-        for token in doc:
-            print(token.text, token.lemma_, token.pos_, token.tag_, token.dep_,
-                token.shape_, token.is_alpha, token.is_stop)
-        print("---------------------------------------------------")
-        print("full original doc: ", doc)
-        triples = sv.get_triples(doc)
-        sv_link = sv.sv_links(triples)
-        singularized_pluralized = [siplu for sinplu in singularize_pluralize(doc, sv_link) for siplu in sinplu]
-        print(singularized_pluralized)
-        print("---------------------------------------------------")
-        newdoc = ""
-        start_point = 0
-        for singplur in singularized_pluralized:
-            newdoc = newdoc + doc.text[start_point:singplur[1]] + singplur[0]
-            start_point = singplur[2]
-        newdoc = newdoc + doc.text[start_point:]
-        all_docs.append(newdoc)
-        print("newdoc: ", newdoc)
-        print(all_docs)
-
-    texts = [#"The white witches work bad, but the better players.",
-             #"The great men sleep until the night.",
-             #"The little girl was running to the mountain.",
-             #"The ladies want to catch, but the boys came first",
-             #"I've seen the queen.",
-             #"The cats could have worked.",
-             #"Pablo Picasso is working at the factory.",
-             #"The old man that looks like John",
-             #"Where the old men that are looking at her are bad, the women are fine",
-             "A fire alarm went off at the Holiday Inn in Hope Street at about 04:20 BST on Saturday and guest was asked to leave the hotel. As they gathered outside they saw the two buses, parked side-by-side in the car park, engulfed by flames. One of the tour groups is from Germany, the other from China and Taiwan. It was their first night in Northern Ireland. The driver of one of the buses said many of the passengers had left personal belongings on board and these had been destroyed. Both groups have organised replacement coaches and will begin their tour of the north coast later than they had planned. Polouse has appealed for information about the attack."
-            ]
-    sing = SingularPlural(texts)
-    print(sing.sing_plur())
-
-if __name__ == "__main__":
-    main()
-"""

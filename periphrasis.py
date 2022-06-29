@@ -1,6 +1,6 @@
 import spacy
 import random
-import adjective_test as adj_test
+import adjectives as adj_test
 
 class PeriPhrasis:
     def __init__(self, docs, nlp=None):

@@ -1,40 +1,93 @@
 import spacy
 import sentence_structure as sv
-import itertools
-from datasets import load_dataset
 
 nlp = spacy.load("en_core_web_lg")
-text1 = nlp(
-    'He is a bad person, but the better player. But, as long as he scores points, they should shut up. Was John in New York? In the end, it doesnt even matter for Johan')
-text2 = nlp('He is not a bad person, but the better player.')
-text3 = nlp("In the end, it doesnt even matter for Johan.")
 
 
-def main():
-    """
-    sents = [sent.as_doc() for sent in text1.sents]
-    for sent in sents:
-        nw = to_newwords(sent)
-        triples = sv.get_triples(sent)
-        svo_links = sv.svo_links(triples)
-#        print(svo_links)
-        for svo_link in svo_links:
-#            print(svo_link)
-            sooo = to_sov(nw, svo_link)
-#            print(make_new_text(sooo))
-    """
-    raw_dataset = load_dataset('xsum')
-    datas=nlp(raw_dataset["train"][203000]['document'])
-    sents=[sent.as_doc() for sent in datas.sents]
-    for sent in sents:
-        nw=to_newwords(sent)
-        triples = sv.get_triples(sent)
-        svo_links = sv.svo_links(triples)
-        print(svo_links)
-        for svo_link in svo_links:
-            print(svo_link)
-            sooo = to_sov(nw, svo_link)
-            print(make_new_text(sooo))
+class Swaps:
+    def __init__(self, docs, nlp=None):
+        self.docs = docs
+        self.nlp = nlp
+        if not self.nlp:
+            spacy.cli.download("en_core_web_lg")
+            self.nlp = spacy.load("en_core_web_lg", disable=['lemmatizer'])
+
+    def mass_sov(self):
+        all_docs = []
+        for doc in self.nlp.pipe(self.docs, batch_size=500):
+            new_sent = ""
+            for sent in [sent.as_doc() for sent in doc.sents]:
+                nw = to_newwords(sent)
+                triples = sv.get_triples(sent)
+                svo_links = check_overlap(check_same_links(sv.svo_links(triples)))
+                print(svo_links)
+                if not svo_links:
+                    new_sent = new_sent + sent.text_with_ws
+                else:
+                    new_sent = new_sent + make_new_text(to_sov(nw, svo_links))
+            all_docs.append(new_sent)
+        return all_docs
+
+    def mass_vso(self):
+        all_docs = []
+        for doc in self.nlp.pipe(self.docs, batch_size=500):
+            new_sent = ""
+            for sent in [sent.as_doc() for sent in doc.sents]:
+                nw = to_newwords(sent)
+                triples = sv.get_triples(sent)
+                svo_links = check_overlap(check_same_links(sv.svo_links(triples)))
+                if not svo_links:
+                    new_sent = new_sent + sent.text_with_ws
+                else:
+                    new_sent = new_sent + make_new_text(to_vso(nw, svo_links))
+            all_docs.append(new_sent)
+        return all_docs
+
+    def mass_vos(self):
+        all_docs = []
+        for doc in self.nlp.pipe(self.docs, batch_size=500):
+            new_sent = ""
+            for sent in [sent.as_doc() for sent in doc.sents]:
+                nw = to_newwords(sent)
+                triples = sv.get_triples(sent)
+                svo_links = check_overlap(check_same_links(sv.svo_links(triples)))
+                if not svo_links:
+                    new_sent = new_sent + sent.text_with_ws
+                else:
+                    new_sent = new_sent + make_new_text(to_vos(nw, svo_links))
+            all_docs.append(new_sent)
+        return all_docs
+
+    def mass_osv(self):
+        all_docs = []
+        for doc in self.nlp.pipe(self.docs, batch_size=500):
+            new_sent = ""
+            for sent in [sent.as_doc() for sent in doc.sents]:
+                nw = to_newwords(sent)
+                triples = sv.get_triples(sent)
+                svo_links = check_overlap(check_same_links(sv.svo_links(triples)))
+                if not svo_links:
+                    new_sent = new_sent + sent.text_with_ws
+                else:
+                    new_sent = new_sent + make_new_text(to_osv(nw, svo_links))
+            all_docs.append(new_sent)
+        return all_docs
+
+    def mass_ovs(self):
+        all_docs = []
+        for doc in self.nlp.pipe(self.docs, batch_size=500):
+            new_sent = ""
+            for sent in [sent.as_doc() for sent in doc.sents]:
+                nw = to_newwords(sent)
+                triples = sv.get_triples(sent)
+                svo_links = check_overlap(check_same_links(sv.svo_links(triples)))
+                if not svo_links:
+                    new_sent = new_sent + sent.text_with_ws
+                else:
+                    new_sent = new_sent + make_new_text(to_ovs(nw, svo_links))
+            all_docs.append(new_sent)
+        return all_docs
+
 
 class NewWord:
     def __init__(self, text, ws):
@@ -50,26 +103,150 @@ def to_newwords(doc):
     return newwords_list
 
 
-def to_sov(newwords, svo_link):
+def to_sov(newwords, svo_links):
     newdoc = newwords[:]
-    print("Original: ", make_new_text(newdoc))
-    verb1 = svo_link[1]
-    object1 = svo_link[2]
-    newdoc[verb1.start] = NewWord(
-        text=object1.text,
-        ws=verb1[-1].whitespace_
-    )
-    newdoc[object1.start] = NewWord(
-        text=verb1.text,
-        ws=object1[-1].whitespace_
-    )
-    verbs_list = newdoc[verb1.start+1 : verb1.end]
-    objects_list = newdoc[object1.start+1 : object1.end]
-    for slic in verbs_list:
-        newdoc.remove(slic)
-    for slic2 in objects_list:
-        newdoc.remove(slic2)
+    verb1 = [svo_link[1] for svo_link in svo_links]
+    object1 = [svo_link[2] for svo_link in svo_links]
+    for i in range(len(verb1)):
+        newdoc[verb1[i].start] = NewWord(
+            text=object1[i].text,
+            ws=verb1[i][-1].whitespace_
+        )
+        newdoc[object1[i].start] = NewWord(
+            text=verb1[i].text,
+            ws=object1[i][-1].whitespace_
+        )
+
+    verbs_list = [newdoc[verb.start + 1: verb.end] for verb in verb1]
+    objects_list = [newdoc[object.start + 1: object.end] for object in object1]
+    for verbs in verbs_list:
+        for slic in verbs:
+            newdoc.remove(slic)
+    for objects in objects_list:
+        for slic2 in objects:
+            newdoc.remove(slic2)
     return newdoc
+
+
+def to_osv(newwords, svo_links):
+    newdoc = newwords[:]
+    for i in range(len(svo_links)):
+        newdoc[svo_links[i][0].start] = NewWord(
+            text=svo_links[i][2].text,
+            ws=svo_links[i][0][-1].whitespace_
+        )
+        newdoc[svo_links[i][1].start] = NewWord(
+            text=svo_links[i][0].text,
+            ws=svo_links[i][1][-1].whitespace_
+        )
+        newdoc[svo_links[i][2].start] = NewWord(
+            text=svo_links[i][1].text,
+            ws=svo_links[i][2][-1].whitespace_
+        )
+
+    subjects_list = [newdoc[svo_link[0].start + 1: svo_link[0].end] for svo_link in svo_links]
+    verbs_list = [newdoc[svo_link[1].start + 1: svo_link[1].end] for svo_link in svo_links]
+    objects_list = [newdoc[svo_link[2].start + 1: svo_link[2].end] for svo_link in svo_links]
+    for subjects in subjects_list:
+        for slic in subjects:
+            newdoc.remove(slic)
+    for verbs in verbs_list:
+        for slic2 in verbs:
+            newdoc.remove(slic2)
+    for objects in objects_list:
+        for slic3 in objects:
+            newdoc.remove(slic3)
+    return newdoc
+
+
+def to_vso(newwords, svo_links):
+    newdoc = newwords[:]
+    for i in range(len(svo_links)):
+        newdoc[svo_links[i][0].start] = NewWord(
+            text=svo_links[i][1].text,
+            ws=svo_links[i][0][-1].whitespace_
+        )
+        newdoc[svo_links[i][1].start] = NewWord(
+            text=svo_links[i][0].text,
+            ws=svo_links[i][1][-1].whitespace_
+        )
+
+    subjects_list = [newdoc[svo_link[0].start + 1: svo_link[0].end] for svo_link in svo_links]
+    verbs_list = [newdoc[svo_link[1].start + 1: svo_link[1].end] for svo_link in svo_links]
+    for subjects in subjects_list:
+        for slic in subjects:
+            newdoc.remove(slic)
+    for verbs in verbs_list:
+        for slic2 in verbs:
+            newdoc.remove(slic2)
+    return newdoc
+
+
+def to_vos(newwords, svo_links):
+    newdoc = newwords[:]
+    for i in range(len(svo_links)):
+        newdoc[svo_links[i][0].start] = NewWord(
+            text=svo_links[i][1].text,
+            ws=svo_links[i][0][-1].whitespace_
+        )
+        newdoc[svo_links[i][1].start] = NewWord(
+            text=svo_links[i][2].text,
+            ws=svo_links[i][1][-1].whitespace_
+        )
+        newdoc[svo_links[i][2].start] = NewWord(
+            text=svo_links[i][0].text,
+            ws=svo_links[i][2][-1].whitespace_
+        )
+
+    subjects_list = [newdoc[svo_link[0].start + 1: svo_link[0].end] for svo_link in svo_links]
+    verbs_list = [newdoc[svo_link[1].start + 1: svo_link[1].end] for svo_link in svo_links]
+    objects_list = [newdoc[svo_link[2].start + 1: svo_link[2].end] for svo_link in svo_links]
+    for subjects in subjects_list:
+        for slic in subjects:
+            newdoc.remove(slic)
+    for verbs in verbs_list:
+        for slic2 in verbs:
+            newdoc.remove(slic2)
+    for objects in objects_list:
+        for slic3 in objects:
+            newdoc.remove(slic3)
+    return newdoc
+
+
+def to_ovs(newwords, svo_links):
+    newdoc = newwords[:]
+    for i in range(len(svo_links)):
+        newdoc[svo_links[i][0].start] = NewWord(
+            text=svo_links[i][2].text,
+            ws=svo_links[i][0][-1].whitespace_
+        )
+        newdoc[svo_links[i][2].start] = NewWord(
+            text=svo_links[i][0].text,
+            ws=svo_links[i][2][-1].whitespace_
+        )
+
+    subjects_list = [newdoc[svo_link[0].start + 1: svo_link[0].end] for svo_link in svo_links]
+    objects_list = [newdoc[svo_link[2].start + 1: svo_link[2].end] for svo_link in svo_links]
+    for subjects in subjects_list:
+        for slic in subjects:
+            newdoc.remove(slic)
+    for objects in objects_list:
+        for slic2 in objects:
+            newdoc.remove(slic2)
+    return newdoc
+
+
+def check_same_links(svo_links):
+    """
+    Some svos are not svo, but are still linked. Remove those
+    :return:
+    """
+    seen = set()
+    return [(a, b, c) for a, b, c in svo_links if not (b in seen or seen.add(b))]
+
+
+def check_overlap(svo_links):
+    return [(a, b, c) for a, b, c in svo_links if (a.end <= b.start and b.end <= c.start)]
 
 
 def make_new_text(new_words):
@@ -77,36 +254,3 @@ def make_new_text(new_words):
         new_word.text + new_word.ws
         for new_word in new_words
     )
-
-
-def check_same_links(svo_link):
-    """
-    Some svos are not svo, but are still linked. Remove those
-    :return:
-    """
-    subjects = [s[0] for s in svo_link]
-    verbs = [v[1] for v in svo_link]
-    objects = [o[1] for o in svo_link]
-    for a, b in itertools.combinations(subjects, 2):
-        if a.start == b.start:
-            return True
-        else:
-            continue
-    for c, d in itertools.combinations(verbs, 2):
-        if c.start == d.start:
-            return True
-        else:
-            continue
-    for e, f in itertools.combinations(objects, 2):
-        if e.start == f.start:
-            return True
-        else:
-            continue
-    return False
-
-
-
-
-
-if __name__ == "__main__":
-    main()

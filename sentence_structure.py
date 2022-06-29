@@ -9,35 +9,12 @@ OBJECTS = {"pobj", "dobj", "dative", "attr", "oprd"}
 SUBJECTS = {"nsubj", "nsubjpass", "csubj", "csubjpass", "agent", "expl"}
 nlp = spacy.load("en_core_web_lg")
 nlp.add_pipe('merge_noun_chunks')
-text = 'He is a bad person, but the better player. But, as long as he scores points, they should shut up. Was John in New York? In the end, it doesnt even matter for Johan'
 vp_patterns = [
     [
         {"POS": {"IN": ["ADV", "AUX", "PART", "VERB"]}, "OP": "*"},
         {"POS": {"IN": ["AUX", "VERB"]}},
     ]
 ]
-doc = nlp(text)
-
-
-# for token in doc:
-#    print(token.text, token.lemma_, token.pos_, token.tag_, token.dep_,
-#        token.shape_, token.is_alpha, token.is_stop)
-
-
-def main():
-    sentences = [i for i in nlp(text).sents]
-    for i in sentences:
-        print(i)
-        triples = get_triples(i)
-        svo_link_lists = svo_links(triples)
-        print(svo_link_lists)
-        if not svo_link_lists:
-            print(sv_links(triples))
-
-
-#    doc2 = nlp("But, as long as he scores points, they should shut up.")
-#    for token in doc2:
-#        print(token.text, token.pos_, token.tag_, token.dep_, token.head)
 
 
 def pos_switcher(doc, pos):
@@ -126,11 +103,7 @@ def svo_links(svo):
         for word in subject
         for object in objects
         for word2 in object
-        if all([get_closest_verb(word, vp), get_closest_verb(word2, vp)])
+        if all([get_closest_verb(word, vp), get_closest_verb(word2, vp), check_svo_structure(subject, vp, object)])
         # if all([word.head in vp, word2.head in vp])
     ]
     return lists
-
-
-if __name__ == "__main__":
-    main()

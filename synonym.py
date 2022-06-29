@@ -3,12 +3,10 @@ import operator
 import spacy
 import textacy
 import textacy.resources
-# from textacy.types import AugTok
 from textacy import utils as util_aug
 from textacy.augmentation.transforms import _select_random_candidates
 from textacy.augmentation.utils import to_aug_toks
 from textacy.augmentation.utils import AugTok
-
 from textacy import preprocessing
 from nltk.corpus import wordnet
 
@@ -60,29 +58,6 @@ class Synonym:
                 ]
 
 
-"""
-        new_aug_toks = []
-        
-        
-        for idx, aug_tok, in enumerate(aug_toks):
-            if idx in rand_idxs:
-                new_aug_toks.append(
-                    AugTok(
-                        text=random.choice(decide_synonyms(aug_tok)),
-                        ws=aug_tok.ws,
-                        pos=aug_tok.pos,
-                        is_word=aug_tok.is_word,
-                        syns=aug_tok.syns,
-                    )
-                )
-            else:
-                new_aug_toks.append(aug_tok)
-"""
-
-
-#  return new_aug_toks
-
-
 def make_new_spacy_doc(aug_toks):
     new_text = "".join(
         aug_tok.text + aug_tok.ws
@@ -119,11 +94,3 @@ def decide_synonyms_vec(aug_tok, nlp):
 
 def decide_synonyms_nowhitespace(aug_tok, nlp):
     return [(syn, nlp(aug_tok.text).similarity(nlp(syn))) for syn in aug_tok.syns]
-
-# nlp = spacy.load("en_core_web_lg")
-
-# syno = Synonym([nlp("Home is where the heart is")], nlp)
-# print(syno.mass_synonyms())
-
-# https://www.geeksforgeeks.org/nlp-synsets-for-a-word-in-wordnet/
-# https://github.com/recognai/spacy-wordnet/blob/master/spacy_wordnet/wordnet_domains.py

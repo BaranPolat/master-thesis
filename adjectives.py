@@ -2,16 +2,10 @@ from lemminflect import getLemma, getInflection
 
 VOWELS = "aeiouy"
 grade_irregular = {
-    "bad": ("worse", "worst"),
-    "far": ("further", "farthest"),
-    "good": ("better", "best"),
     "hind": ("hinder", "hindmost"),
     "ill": ("worse", "worst"),
-    "less": ("lesser", "least"),
     "little": ("less", "least"),
-    "many": ("more", "most"),
-    "much": ("more", "most"),
-    "well": ("better", "best")
+    "many": ("more", "most")
 }
 
 grade_uninflected = ["giant", "glib", "hurt", "known", "madly"]
@@ -32,21 +26,27 @@ def _count_syllables(word):
     return n
 
 
+def get_CorrectBase(lemma):
+    return getLemma(lemma, 'ADJ')
+
+
 def grade(adjective, suffix=COMPARATIVE, sentiment='positive'):
     """ Returns the comparative or superlative form of the given adjective.
     """
+    tag = future_degree(suffix)
     adjective = adjective.text
     n = _count_syllables(adjective)
     length_adjective = len(adjective.split())
     is_irregular = any(lemmas in getLemma(adjective, 'ADJ') for lemmas in grade_irregular)
+    is_irregular_list = [lemmas for lemmas in grade_irregular if lemmas in getLemma(adjective, 'ADJ')]
     if suffix == 'positive':
-        return getLemma(adjective, 'ADJ')
+        return getLemma(adjective, 'ADJ')[0]
     elif is_irregular:
-        # A number of adjectives inflect irregularly.
-        if suffix == COMPARATIVE:
-            return getInflection(getLemma(adjective, 'ADJ')[0], 'JJR')
-        if suffix == SUPERLATIVE:
-            return getInflection(getLemma(adjective, 'ADJ')[0], 'JJS')
+        # A number of adjectives inflect irregularly and aren't picked up correctly by
+        if tag == 'JJR':
+            return grade_irregular.get(is_irregular_list[0])[0]
+        else:
+            return grade_irregular.get(is_irregular_list[0])[1]
     elif adjective in grade_uninflected:
         # A number of adjectives don't inflect at all.
         if length_adjective == 1 and sentiment == 'positive':
@@ -57,23 +57,14 @@ def grade(adjective, suffix=COMPARATIVE, sentiment='positive'):
             return "%s %s" % (suffix == COMPARATIVE and "more" or "most", adjective.split(' ')[1])
         else:
             return "%s %s" % (suffix == COMPARATIVE and "less" or "least", adjective.split(' ')[1])
-    elif n <= 2 and adjective.endswith("e"):
-        # With one syllable and ending with an e: larger, wiser.
-        suffix = suffix.lstrip("e")
-    elif n == 1 and len(adjective) >= 3 \
-            and adjective[-1] not in VOWELS and adjective[-2] in VOWELS and adjective[-3] not in VOWELS:
-        # With one syllable ending with consonant-vowel-consonant: bigger, thinner.
-        if not adjective.endswith("w"):  # Exceptions: lower, newer.
-            suffix = adjective[-1] + suffix
     elif n == 1:
-        # With one syllable ending with more consonants or vowels: briefer.
-        pass
+        return getInflection(getLemma(adjective, 'ADJ')[0], tag)[0]
+    elif n <= 2 and adjective.endswith("e"):
+        return getInflection(getLemma(adjective, 'ADJ')[0], tag)[0]
     elif n == 2 and adjective.endswith("y"):
-        # With two syllables ending with a y: funnier, hairier.
-        adjective = adjective[:-1] + "i"
+        return getInflection(getLemma(adjective, 'ADJ')[0], tag)[0]
     elif n == 2 and adjective[-2:] in ("er", "le", "ow"):
-        # With two syllables and specific suffixes: gentler, narrower.
-        pass
+        return getInflection(getLemma(adjective, 'ADJ')[0], tag)[0]
     else:
         # With three or more syllables: more generous, more important.
         if length_adjective == 1 and sentiment == 'positive':
@@ -84,7 +75,6 @@ def grade(adjective, suffix=COMPARATIVE, sentiment='positive'):
             return "%s %s" % (suffix == COMPARATIVE and "more" or "most", adjective.split(' ')[1])
         else:
             return "%s %s" % (suffix == COMPARATIVE and "less" or "least", adjective.split(' ')[1])
-    return adjective + suffix
 
 
 def positive(adjective):
@@ -105,3 +95,12 @@ def determine_degree(adjective):
         return adjective.tag_
     else:
         return adjective[1].tag_
+
+
+def future_degree(text):
+    if text == COMPARATIVE:
+        return "JJR"
+    elif text == SUPERLATIVE:
+        return "JJS"
+    else:
+        return 'positive'
